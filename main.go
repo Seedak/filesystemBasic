@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/spf13/afero"
+	"io/ioutil"
 	"log"
 	"os"
 )
@@ -12,7 +13,7 @@ var fileSystem = afero.NewOsFs()
 var scanner = bufio.NewScanner(os.Stdin)
 var file afero.File
 
-func main(){
+func main() {
 	var x int
 	fmt.Println("1: Create a file \n" +
 		"2: Open and edit a File\n" +
@@ -21,15 +22,17 @@ func main(){
 		"5: Removing a file\n" +
 		"6: Create Directory\n" +
 		"7: Remove Directory\n" +
-		"8: Exit Server\n " +
+		"8: Move File\n" +
+		"9: Copy File\n" +
+		"0: Exit Server\n " +
 		"Enter your choice")
 	_, err := fmt.Scanf("%d", &x)
-	if err != nil{
+	if err != nil {
 		log.Panic(err)
 	}
 	cases(x)
 }
-func cases(x int){
+func cases(x int) {
 	switch x {
 	case 1:
 		createFile()
@@ -52,43 +55,50 @@ func cases(x int){
 	case 7:
 		removeDirectory()
 		cont()
-	case 8:exit()
+	case 8:
+		moveFile()
+		cont()
+	case 9:
+		copyFile()
+		cont()
+	case 0:
+		exit()
 	}
 }
 
-func cont(){
+func cont() {
 	var y string
 	fmt.Println("If you wanna continue enter Y")
 	_, err := fmt.Scanf("%s", &y)
-	if err != nil{
+	if err != nil {
 		log.Panic(err)
 	}
-	if y == "y" || y == "Y"{
+	if y == "y" || y == "Y" {
 		main()
-	} else{
-		cases( 8)
+	} else {
+		cases(0)
 	}
 }
 
-func getFileName() (filename string){
+func getFileName() (filename string) {
 	fmt.Println("Enter the filename")
 	_, _ = fmt.Scanln(&filename)
 	return
 }
 func fileExists(filename string) bool {
 	info, err := fileSystem.Stat(filename)
-	if os.IsNotExist(err){
+	if os.IsNotExist(err) {
 		return false
 	}
-	return  !info.IsDir()
+	return !info.IsDir()
 }
 
 func createFile() afero.File {
 	path := getDirectory()
 	filename := getFileName()
-	if fileExists("./" + path + "/" + filename){
+	if fileExists("./" + path + "/" + filename) {
 		fmt.Println("A file with this name already exists")
-	}else {
+	} else {
 		var err error
 		file, err = fileSystem.Create("./" + path + "/" + filename)
 		if err != nil {
@@ -100,11 +110,11 @@ func createFile() afero.File {
 	return nil
 }
 
-func editFile() afero.File{
+func editFile() afero.File {
 	path := getDirectory()
 	filename := getFileName()
 	var err error
-	file, err = fileSystem.OpenFile("./" + path + "/" + filename,os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
+	file, err = fileSystem.OpenFile("./"+path+"/"+filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
 	if err != nil {
 		panic(err)
 	}
@@ -112,74 +122,125 @@ func editFile() afero.File{
 	_ = scanner.Scan()
 	str := scanner.Text()
 	err = scanner.Err()
-	if err != nil{
+	if err != nil {
 		fmt.Println("error reading from input", err)
 	}
-	_,_ = file.Write([]byte(str))
+	_, _ = file.Write([]byte(str))
 	fmt.Println("File Updated")
 	_ = file.Close()
 	return file
 }
 
-func rename(){
+func rename() {
 	path := getDirectory()
 	filename := getFileName()
 	var newName string
 	fmt.Println("Enter New file name")
 	_, _ = fmt.Scanln(&newName)
 	if fileExists("./" + path + "/" + filename) {
-		err := fileSystem.Rename("./" + path + "/" + filename,"./" + path + "/" + newName)
-		if err != nil{
+		err := fileSystem.Rename("./"+path+"/"+filename, "./"+path+"/"+newName)
+		if err != nil {
 			panic(err)
 		}
 		fmt.Println("File Renamed")
-	}else {
+	} else {
 		fmt.Println("File Doesn't Exists")
 	}
 }
 
-func getInfo(){
+func getInfo() {
 	path := getDirectory()
 	filename := getFileName()
 	if fileExists("./" + path + "/" + filename) {
 		fmt.Println(fileSystem.Stat("./" + path + "/" + filename))
-	}else {
+	} else {
 		fmt.Println("File Doesn't Exists")
 	}
 	cont()
 }
 
-func deleteFile(){
+func moveFile() {
+	path := getDirectory()
+	filename := getFileName()
+	var newPath string
+	fmt.Println("Enter new relative path")
+	_, _ = fmt.Scanf("%s", &newPath)
+	if !fileExists("./" + newPath) {
+		err := fileSystem.MkdirAll("./"+newPath, 0777)
+		if err != nil {
+			panic(err)
+		}
+	}
+	err := fileSystem.Rename("./"+path+"/"+filename, "./"+newPath+"/"+filename)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func copyFile() {
+	path := getDirectory()
+	filename := getFileName()
+	var newPath string
+	fmt.Println("Enter new relative path")
+	_, _ = fmt.Scanf("%s", &newPath)
+	if !fileExists("./" + newPath) {
+		err := fileSystem.MkdirAll("./"+newPath, 0777)
+		if err != nil {
+			panic(err)
+		}
+	}
+	var content []byte
+	content, err := ioutil.ReadFile("./" + path + "/" + filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if fileExists("./" + newPath + "/" + filename) {
+		fmt.Println("A file with this name already exists")
+	} else {
+		var err error
+		file, err = fileSystem.Create("./" + newPath + "/" + filename)
+		if err != nil {
+			panic(err)
+		}
+		file, _ = fileSystem.OpenFile("./"+newPath+"/"+filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
+		_, err = file.Write(content)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func deleteFile() {
 	path := getDirectory()
 	filename := getFileName()
 	if fileExists("./" + path + "/" + filename) {
 		err := fileSystem.Remove("./" + path + "/" + filename)
-		if err!=nil{
+		if err != nil {
 			panic(err)
 		}
 		fmt.Println("File Deleted")
-	}else {
+	} else {
 		fmt.Println("File Doesn't Exists")
 	}
 }
 
-func getDirectory() (dirName string){
+func getDirectory() (dirName string) {
 	fmt.Println("Enter directory name/relative Path")
-	_, _= fmt.Scanf("%s", &dirName)
+	_, _ = fmt.Scanf("%s", &dirName)
 	if !fileExists(dirName) {
-		err := fileSystem.MkdirAll("./" + dirName, 0777)
-		if err!= nil{
+		err := fileSystem.MkdirAll("./"+dirName, 0777)
+		if err != nil {
 			panic(err)
 		}
 	}
 	return
 }
 
-func removeDirectory(){
+func removeDirectory() {
 	path := getDirectory()
 	_ = fileSystem.RemoveAll(path)
 }
 
-func exit(){
+func exit() {
 	os.Exit(0)
 }
