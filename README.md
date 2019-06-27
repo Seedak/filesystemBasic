@@ -18,3 +18,7 @@ The file system performs basic opertions in your project directory wich are:
 ->rename file.
 
 ->get file information.
+
+->move file.
+
+->copy file.
