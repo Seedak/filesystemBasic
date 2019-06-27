@@ -11,7 +11,6 @@ import (
 var fileSystem = afero.NewOsFs()
 var scanner = bufio.NewScanner(os.Stdin)
 var file afero.File
-var err error
 
 func main(){
 	var x int
@@ -24,7 +23,7 @@ func main(){
 		"7: Remove Directory\n" +
 		"8: Exit Server\n " +
 		"Enter your choice")
-	_, err = fmt.Scanf("%d", &x)
+	_, err := fmt.Scanf("%d", &x)
 	if err != nil{
 		log.Panic(err)
 	}
@@ -90,6 +89,7 @@ func createFile() afero.File {
 	if fileExists("./" + path + "/" + filename){
 		fmt.Println("A file with this name already exists")
 	}else {
+		var err error
 		file, err = fileSystem.Create("./" + path + "/" + filename)
 		if err != nil {
 			panic(err)
@@ -103,6 +103,7 @@ func createFile() afero.File {
 func editFile() afero.File{
 	path := getDirectory()
 	filename := getFileName()
+	var err error
 	file, err = fileSystem.OpenFile("./" + path + "/" + filename,os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
 	if err != nil {
 		panic(err)
