@@ -1,5 +1,5 @@
 # filesystemBasic
-A basic file system created in golang using Afero library
+A basic file system created in golang using Afero library(https://github.com/spf13/afero)
 
 This project was made using GoLand 2019.1.13
 
